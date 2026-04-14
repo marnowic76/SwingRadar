@@ -1,0 +1,157 @@
+# SwingRadar v0.1 – Watchlist 150 tickerów
+# Najbardziej płynne spółki US (S&P 500 + NASDAQ)
+# Jeden ticker per linia, # = komentarz
+# Aktualizacja: kwiecień 2026
+
+# ── Mega-cap Tech ─────────────────────────────
+AAPL
+MSFT
+NVDA
+GOOGL
+GOOG
+META
+AMZN
+TSLA
+AVGO
+ORCL
+
+# ── Semiconductors ────────────────────────────
+AMD
+QCOM
+MU
+AMAT
+LRCX
+KLAC
+INTC
+TXN
+ADI
+MRVL
+
+# ── Software / Cloud ──────────────────────────
+CRM
+NOW
+ADBE
+SNOW
+PLTR
+DDOG
+PANW
+CRWD
+ZS
+NET
+FTNT
+TEAM
+WDAY
+HUBS
+VEEV
+
+# ── AI / Growth Tech ──────────────────────────
+SMCI
+ARM
+ASML
+TSM
+ANET
+DELL
+HPE
+CDNS
+SNPS
+
+# ── Financials ────────────────────────────────
+JPM
+GS
+MS
+BAC
+WFC
+C
+BLK
+SCHW
+AXP
+V
+MA
+COF
+USB
+TFC
+PNC
+
+# ── Healthcare / Pharma ───────────────────────
+LLY
+UNH
+ABBV
+TMO
+DHR
+ISRG
+MDT
+BMY
+PFE
+AMGN
+GILD
+REGN
+VRTX
+MRNA
+IDXX
+
+# ── Consumer / Retail ─────────────────────────
+AMZN
+COST
+HD
+WMT
+NKE
+SBUX
+MCD
+TGT
+LOW
+BKNG
+ABNB
+UBER
+LYFT
+
+# ── Energy ────────────────────────────────────
+XOM
+CVX
+COP
+EOG
+SLB
+PSX
+VLO
+OXY
+MPC
+
+# ── Industrials / Defense ─────────────────────
+CAT
+HON
+GE
+RTX
+LMT
+NOC
+BA
+DE
+UPS
+FDX
+CSX
+UNP
+
+# ── Communication ─────────────────────────────
+NFLX
+DIS
+CMCSA
+T
+VZ
+TMUS
+SPOT
+
+# ── Consumer Discretionary ────────────────────
+TSLA
+F
+GM
+RIVN
+TM
+
+# ── ETF sektorowe (kontekst reżimu) ───────────
+SPY
+QQQ
+XLK
+SMH
+XLF
+XLV
+XLE
+XLI
+XLY
