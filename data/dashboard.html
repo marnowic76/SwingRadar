@@ -1,0 +1,2588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="900">
+    <title>SwingRadar DSS</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <style>
+        :root {
+            --bg:      #0F1117;
+            --bg2:     #1A1D27;
+            --bg3:     #252836;
+            --border:  #2D3148;
+            --text:    #E2E8F0;
+            --muted:   #6B7280;
+            --blue:    #2563EB;
+            --green:   #22C55E;
+            --yellow:  #EAB308;
+            --red:     #EF4444;
+            --purple:  #8B5CF6;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        /* ── NAV ── */
+        .navbar {
+            background: var(--bg2);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .navbar-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .navbar img.logo {
+            height: 36px;
+        }
+        .navbar-meta {
+            font-size: 12px;
+            color: var(--muted);
+        }
+        .navbar-meta a {
+            color: var(--blue);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .navbar-right {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            font-size: 12px;
+            color: var(--muted);
+        }
+        .last-scan {
+            background: var(--bg3);
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+
+        /* ── TABS ── */
+        .tabs {
+            display: flex;
+            gap: 4px;
+            padding: 16px 24px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .tab {
+            padding: 8px 18px;
+            cursor: pointer;
+            border-radius: 8px 8px 0 0;
+            color: var(--muted);
+            font-weight: 500;
+            border: 1px solid transparent;
+            border-bottom: none;
+            transition: all 0.15s;
+        }
+        .tab:hover { color: var(--text); background: var(--bg3); }
+        .tab.active {
+            color: var(--text);
+            background: var(--bg2);
+            border-color: var(--border);
+            border-bottom-color: var(--bg2);
+            margin-bottom: -1px;
+        }
+
+        /* ── CONTENT ── */
+        .content { padding: 24px; }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        /* ── STATS ROW ── */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .stat-card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px 20px;
+        }
+        .stat-label { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+        .stat-value { font-size: 28px; font-weight: 700; color: var(--text); }
+
+        /* ── TABLES ── */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th {
+            background: var(--bg3);
+            color: var(--muted);
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: var(--bg3); }
+        td.num { text-align: right; font-variant-numeric: tabular-nums; }
+        td.sector { color: var(--muted); font-size: 12px; }
+        td.time { color: var(--muted); font-size: 12px; white-space: nowrap; }
+        td.source { color: var(--muted); font-size: 12px; }
+        td.headline a { color: var(--text); text-decoration: none; }
+        td.headline a:hover { color: var(--blue); }
+        td.empty { text-align: center; color: var(--muted); padding: 24px; }
+        .rr-time { color: var(--muted); font-size: 11px; }
+
+        /* ── BADGES ── */
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .badge-confirmed { background: rgba(34,197,94,0.15); color: var(--green); }
+        .badge-candidate { background: rgba(37,99,235,0.15); color: #60A5FA; }
+        .badge-new        { background: rgba(107,114,128,0.15); color: var(--muted); }
+
+        /* ── FRESHNESS ── */
+        .freshness-fresh    { color: var(--green); }
+        .freshness-moderate { color: var(--yellow); }
+        .freshness-stale    { color: var(--red); }
+
+        /* ── SECTOR BLOCKS ── */
+        .sector-block {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+        .sector-header {
+            padding: 12px 16px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+        }
+        .sector-header:hover { background: var(--bg3); }
+        .sector-count { color: var(--muted); font-weight: 400; margin-left: 6px; }
+        .toggle-icon { color: var(--muted); font-size: 10px; }
+        .sector-body { overflow-x: auto; }
+        .sector-body.collapsed { display: none; }
+
+        /* ── TOP10 TABLE ── */
+        .top10-wrap {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        /* ── NEWS ── */
+        .news-wrap {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        /* ── FOOTER ── */
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--muted);
+            font-size: 12px;
+            border-top: 1px solid var(--border);
+            margin-top: 40px;
+        }
+        footer a { color: var(--blue); text-decoration: none; font-weight: 600; }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 768px) {
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+            .tabs { overflow-x: auto; flex-wrap: nowrap; }
+            .navbar-meta { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+    <div class="navbar-left">
+        <img class="logo" src="SwingRadar-logo.webp" alt="SwingRadar" onerror="this.style.display='none'">
+        <span class="navbar-meta">
+            Decision Support System &nbsp;·&nbsp;
+            Built by <a href="https://www.nex41.io" target="_blank">Nex41</a>
+            &nbsp;·&nbsp; <a href="https://www.nex41.io" target="_blank" style="color:var(--muted)">www.nex41.io</a>
+        </span>
+    </div>
+    <div class="navbar-right">
+        <span class="last-scan">Last scan: 2026-04-24 19:57:51</span>
+        <span>·</span>
+        <span>Generated: 2026-04-25 22:55</span>
+    </div>
+</nav>
+
+<!-- TABS -->
+<div class="tabs">
+    <div class="tab active" onclick="showTab('top10')">🏆 Top 10</div>
+    <div class="tab" onclick="showTab('sectors')">📊 Sectors</div>
+    <div class="tab" onclick="showTab('news')">📰 News</div>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+    <!-- TOP 10 -->
+    <div class="tab-panel active" id="tab-top10">
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-label">Monitored</div>
+                <div class="stat-value">161</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Candidates</div>
+                <div class="stat-value" style="color:var(--blue)">30</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Confirmed</div>
+                <div class="stat-value" style="color:var(--green)">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Generated</div>
+                <div class="stat-value" style="font-size:18px;padding-top:6px">22:55</div>
+            </div>
+        </div>
+        <div class="top10-wrap">
+            <table>
+                <thead><tr>
+                    <th>#</th><th>Ticker</th><th>Sector</th><th>Status</th>
+                    <th style="text-align:right">Stability</th>
+                    <th style="text-align:right">Real R/R</th>
+                    <th style="text-align:right">Entry $</th>
+                    <th style="text-align:right">Stop Loss</th>
+                    <th style="text-align:right">Target</th>
+                    <th style="text-align:right">Last Updated</th>
+                </tr></thead>
+                <tbody>
+        <tr>
+            <td class="num">1</td>
+            <td><strong>TXN</strong></td>
+            <td class="sector">Semiconductors</td>
+            <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+            <td class="num">94.0%</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num freshness-stale">🔴 04-24 19:57</td>
+        </tr>
+        <tr>
+            <td class="num">2</td>
+            <td><strong>ISRG</strong></td>
+            <td class="sector">Healthcare / Pharma</td>
+            <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+            <td class="num">93.0%</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num freshness-stale">🔴 04-24 19:57</td>
+        </tr>
+        <tr>
+            <td class="num">3</td>
+            <td><strong>ORCL</strong></td>
+            <td class="sector">Mega-cap Tech</td>
+            <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+            <td class="num">90.4%</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num freshness-stale">🔴 04-24 19:56</td>
+        </tr>
+        <tr>
+            <td class="num">4</td>
+            <td><strong>DDOG</strong></td>
+            <td class="sector">Software / Cloud</td>
+            <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+            <td class="num">88.5%</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num freshness-stale">🔴 04-24 19:57</td>
+        </tr>
+        <tr>
+            <td class="num">5</td>
+            <td><strong>UBER</strong></td>
+            <td class="sector">Consumer / Retail</td>
+            <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+            <td class="num">88.1%</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num freshness-stale">🔴 04-24 19:56</td>
+        </tr>
+        <tr>
+            <td class="num">6</td>
+            <td><strong>AAPL</strong></td>
+            <td class="sector">Mega-cap Tech</td>
+            <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+            <td class="num">86.8%</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num freshness-stale">🔴 04-24 19:56</td>
+        </tr>
+        <tr>
+            <td class="num">7</td>
+            <td><strong>ADBE</strong></td>
+            <td class="sector">Software / Cloud</td>
+            <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+            <td class="num">85.5%</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num freshness-stale">🔴 04-24 19:57</td>
+        </tr>
+        <tr>
+            <td class="num">8</td>
+            <td><strong>MXL</strong></td>
+            <td class="sector">Dynamic</td>
+            <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+            <td class="num">85.5%</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num freshness-stale">🔴 04-24 19:56</td>
+        </tr>
+        <tr>
+            <td class="num">9</td>
+            <td><strong>UNP</strong></td>
+            <td class="sector">Industrials / Defense</td>
+            <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+            <td class="num">85.0%</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num freshness-stale">🔴 04-24 19:56</td>
+        </tr>
+        <tr>
+            <td class="num">10</td>
+            <td><strong>POET</strong></td>
+            <td class="sector">Dynamic</td>
+            <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+            <td class="num">85.0%</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num freshness-stale">🔴 04-24 19:56</td>
+        </tr></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- SECTORS -->
+    <div class="tab-panel" id="tab-sectors">
+        
+        <div class="sector-block">
+            <div class="sector-header" onclick="toggleSector(this)">
+                📁 AI / Growth Tech <span class="sector-count">(8)</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="sector-body">
+                <table>
+                    <thead><tr>
+                        <th>Ticker</th><th>Status</th><th>Stability</th>
+                        <th>Real R/R</th><th>Entry $</th><th>Stop Loss</th>
+                        <th>Target</th><th>Last Updated</th>
+                    </tr></thead>
+                    <tbody>
+            <tr>
+                <td><strong>DELL</strong></td>
+                <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+                <td class="num">79.4%</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>SMCI</strong></td>
+                <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+                <td class="num">78.9%</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>ARM</strong></td>
+                <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+                <td class="num">77.0%</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>ASML</strong></td>
+                <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+                <td class="num">67.2%</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>ANET</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>HPE</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>TSM</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>SNPS</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="sector-block">
+            <div class="sector-header" onclick="toggleSector(this)">
+                📁 Communication <span class="sector-count">(7)</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="sector-body">
+                <table>
+                    <thead><tr>
+                        <th>Ticker</th><th>Status</th><th>Stability</th>
+                        <th>Real R/R</th><th>Entry $</th><th>Stop Loss</th>
+                        <th>Target</th><th>Last Updated</th>
+                    </tr></thead>
+                    <tbody>
+            <tr>
+                <td><strong>DIS</strong></td>
+                <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+                <td class="num">75.4%</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr>
+            <tr>
+                <td><strong>CMCSA</strong></td>
+                <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+                <td class="num">60.4%</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 13:16</td>
+            </tr>
+            <tr>
+                <td><strong>VZ</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-23 22:23</td>
+            </tr>
+            <tr>
+                <td><strong>TMUS</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-23 22:23</td>
+            </tr>
+            <tr>
+                <td><strong>T</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>NFLX</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>SPOT</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-23 22:23</td>
+            </tr></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="sector-block">
+            <div class="sector-header" onclick="toggleSector(this)">
+                📁 Consumer / Retail <span class="sector-count">(12)</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="sector-body">
+                <table>
+                    <thead><tr>
+                        <th>Ticker</th><th>Status</th><th>Stability</th>
+                        <th>Real R/R</th><th>Entry $</th><th>Stop Loss</th>
+                        <th>Target</th><th>Last Updated</th>
+                    </tr></thead>
+                    <tbody>
+            <tr>
+                <td><strong>UBER</strong></td>
+                <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+                <td class="num">88.1%</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr>
+            <tr>
+                <td><strong>TGT</strong></td>
+                <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+                <td class="num">81.0%</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr>
+            <tr>
+                <td><strong>WMT</strong></td>
+                <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+                <td class="num">78.0%</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr>
+            <tr>
+                <td><strong>COST</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>HD</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr>
+            <tr>
+                <td><strong>BKNG</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-23 22:23</td>
+            </tr>
+            <tr>
+                <td><strong>NKE</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>SBUX</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-23 22:23</td>
+            </tr>
+            <tr>
+                <td><strong>LOW</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>LYFT</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr>
+            <tr>
+                <td><strong>ABNB</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>MCD</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="sector-block">
+            <div class="sector-header" onclick="toggleSector(this)">
+                📁 Consumer Discretionary <span class="sector-count">(4)</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="sector-body">
+                <table>
+                    <thead><tr>
+                        <th>Ticker</th><th>Status</th><th>Stability</th>
+                        <th>Real R/R</th><th>Entry $</th><th>Stop Loss</th>
+                        <th>Target</th><th>Last Updated</th>
+                    </tr></thead>
+                    <tbody>
+            <tr>
+                <td><strong>GM</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-23 22:23</td>
+            </tr>
+            <tr>
+                <td><strong>F</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>TM</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>RIVN</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="sector-block">
+            <div class="sector-header" onclick="toggleSector(this)">
+                📁 Dynamic <span class="sector-count">(36)</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="sector-body">
+                <table>
+                    <thead><tr>
+                        <th>Ticker</th><th>Status</th><th>Stability</th>
+                        <th>Real R/R</th><th>Entry $</th><th>Stop Loss</th>
+                        <th>Target</th><th>Last Updated</th>
+                    </tr></thead>
+                    <tbody>
+            <tr>
+                <td><strong>MXL</strong></td>
+                <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+                <td class="num">85.5%</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr>
+            <tr>
+                <td><strong>POET</strong></td>
+                <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+                <td class="num">85.0%</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr>
+            <tr>
+                <td><strong>TRT</strong></td>
+                <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+                <td class="num">80.5%</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>PENN</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 13:15</td>
+            </tr>
+            <tr>
+                <td><strong>QBTZ</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 13:15</td>
+            </tr>
+            <tr>
+                <td><strong>SKLZ</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 13:15</td>
+            </tr>
+            <tr>
+                <td><strong>RGTZ</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 13:15</td>
+            </tr>
+            <tr>
+                <td><strong>AUUD</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 13:33</td>
+            </tr>
+            <tr>
+                <td><strong>IONZ</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 13:15</td>
+            </tr>
+            <tr>
+                <td><strong>TZOO</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 13:15</td>
+            </tr>
+            <tr>
+                <td><strong>EUDA</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 13:16</td>
+            </tr>
+            <tr>
+                <td><strong>INV</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 13:16</td>
+            </tr>
+            <tr>
+                <td><strong>HELE</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 13:16</td>
+            </tr>
+            <tr>
+                <td><strong>URI</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 13:16</td>
+            </tr>
+            <tr>
+                <td><strong>NEU</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 13:33</td>
+            </tr>
+            <tr>
+                <td><strong>OKLL</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 13:33</td>
+            </tr>
+            <tr>
+                <td><strong>RMBS</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 13:33</td>
+            </tr>
+            <tr>
+                <td><strong>SOXL</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 13:44</td>
+            </tr>
+            <tr>
+                <td><strong>ARMG</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr>
+            <tr>
+                <td><strong>OGN</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>CHE</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 14:37</td>
+            </tr>
+            <tr>
+                <td><strong>WOLF</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 17:34</td>
+            </tr>
+            <tr>
+                <td><strong>AMDL</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>LINT</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>APPF</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 14:20</td>
+            </tr>
+            <tr>
+                <td><strong>SMCX</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:21</td>
+            </tr>
+            <tr>
+                <td><strong>ENVB</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>HIMZ</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:03</td>
+            </tr>
+            <tr>
+                <td><strong>AMUU</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr>
+            <tr>
+                <td><strong>AAOI</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:21</td>
+            </tr>
+            <tr>
+                <td><strong>CEVA</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:03</td>
+            </tr>
+            <tr>
+                <td><strong>ATOM</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>EOSE</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 15:48</td>
+            </tr>
+            <tr>
+                <td><strong>MX</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:39</td>
+            </tr>
+            <tr>
+                <td><strong>XNDU</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 17:16</td>
+            </tr>
+            <tr>
+                <td><strong>AKAN</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="sector-block">
+            <div class="sector-header" onclick="toggleSector(this)">
+                📁 ETF sektorowe (kontekst reżimu) <span class="sector-count">(9)</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="sector-body">
+                <table>
+                    <thead><tr>
+                        <th>Ticker</th><th>Status</th><th>Stability</th>
+                        <th>Real R/R</th><th>Entry $</th><th>Stop Loss</th>
+                        <th>Target</th><th>Last Updated</th>
+                    </tr></thead>
+                    <tbody>
+            <tr>
+                <td><strong>QQQ</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>SMH</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>XLY</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr>
+            <tr>
+                <td><strong>XLE</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>XLK</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>XLI</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr>
+            <tr>
+                <td><strong>XLV</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>SPY</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>XLF</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="sector-block">
+            <div class="sector-header" onclick="toggleSector(this)">
+                📁 Energy <span class="sector-count">(9)</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="sector-body">
+                <table>
+                    <thead><tr>
+                        <th>Ticker</th><th>Status</th><th>Stability</th>
+                        <th>Real R/R</th><th>Entry $</th><th>Stop Loss</th>
+                        <th>Target</th><th>Last Updated</th>
+                    </tr></thead>
+                    <tbody>
+            <tr>
+                <td><strong>PSX</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr>
+            <tr>
+                <td><strong>SLB</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-23 22:23</td>
+            </tr>
+            <tr>
+                <td><strong>CVX</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>COP</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>VLO</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr>
+            <tr>
+                <td><strong>OXY</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>MPC</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>XOM</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>EOG</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="sector-block">
+            <div class="sector-header" onclick="toggleSector(this)">
+                📁 Financials <span class="sector-count">(15)</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="sector-body">
+                <table>
+                    <thead><tr>
+                        <th>Ticker</th><th>Status</th><th>Stability</th>
+                        <th>Real R/R</th><th>Entry $</th><th>Stop Loss</th>
+                        <th>Target</th><th>Last Updated</th>
+                    </tr></thead>
+                    <tbody>
+            <tr>
+                <td><strong>GS</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr>
+            <tr>
+                <td><strong>C</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr>
+            <tr>
+                <td><strong>BLK</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>USB</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr>
+            <tr>
+                <td><strong>V</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-23 22:23</td>
+            </tr>
+            <tr>
+                <td><strong>TFC</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>WFC</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>MA</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr>
+            <tr>
+                <td><strong>JPM</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>BAC</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>MS</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr>
+            <tr>
+                <td><strong>PNC</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>COF</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>AXP</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>SCHW</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="sector-block">
+            <div class="sector-header" onclick="toggleSector(this)">
+                📁 Healthcare / Pharma <span class="sector-count">(15)</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="sector-body">
+                <table>
+                    <thead><tr>
+                        <th>Ticker</th><th>Status</th><th>Stability</th>
+                        <th>Real R/R</th><th>Entry $</th><th>Stop Loss</th>
+                        <th>Target</th><th>Last Updated</th>
+                    </tr></thead>
+                    <tbody>
+            <tr>
+                <td><strong>ISRG</strong></td>
+                <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+                <td class="num">93.0%</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>IDXX</strong></td>
+                <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+                <td class="num">73.0%</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr>
+            <tr>
+                <td><strong>DHR</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr>
+            <tr>
+                <td><strong>AMGN</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>UNH</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr>
+            <tr>
+                <td><strong>REGN</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>MDT</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>VRTX</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>GILD</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>BMY</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>PFE</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr>
+            <tr>
+                <td><strong>LLY</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 13:44</td>
+            </tr>
+            <tr>
+                <td><strong>ABBV</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>TMO</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>MRNA</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 14:54</td>
+            </tr></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="sector-block">
+            <div class="sector-header" onclick="toggleSector(this)">
+                📁 Industrials / Defense <span class="sector-count">(12)</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="sector-body">
+                <table>
+                    <thead><tr>
+                        <th>Ticker</th><th>Status</th><th>Stability</th>
+                        <th>Real R/R</th><th>Entry $</th><th>Stop Loss</th>
+                        <th>Target</th><th>Last Updated</th>
+                    </tr></thead>
+                    <tbody>
+            <tr>
+                <td><strong>UNP</strong></td>
+                <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+                <td class="num">85.0%</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr>
+            <tr>
+                <td><strong>FDX</strong></td>
+                <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+                <td class="num">83.4%</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr>
+            <tr>
+                <td><strong>CSX</strong></td>
+                <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+                <td class="num">82.9%</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>GE</strong></td>
+                <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+                <td class="num">77.5%</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>DE</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 16:05</td>
+            </tr>
+            <tr>
+                <td><strong>HON</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>BA</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>RTX</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>UPS</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-23 22:23</td>
+            </tr>
+            <tr>
+                <td><strong>CAT</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr>
+            <tr>
+                <td><strong>NOC</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>LMT</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 14:02</td>
+            </tr></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="sector-block">
+            <div class="sector-header" onclick="toggleSector(this)">
+                📁 Mega-cap Tech <span class="sector-count">(10)</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="sector-body">
+                <table>
+                    <thead><tr>
+                        <th>Ticker</th><th>Status</th><th>Stability</th>
+                        <th>Real R/R</th><th>Entry $</th><th>Stop Loss</th>
+                        <th>Target</th><th>Last Updated</th>
+                    </tr></thead>
+                    <tbody>
+            <tr>
+                <td><strong>ORCL</strong></td>
+                <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+                <td class="num">90.4%</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr>
+            <tr>
+                <td><strong>AAPL</strong></td>
+                <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+                <td class="num">86.8%</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr>
+            <tr>
+                <td><strong>TSLA</strong></td>
+                <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+                <td class="num">72.0%</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr>
+            <tr>
+                <td><strong>AVGO</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>GOOG</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>META</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr>
+            <tr>
+                <td><strong>GOOGL</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>NVDA</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>AMZN</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>MSFT</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="sector-block">
+            <div class="sector-header" onclick="toggleSector(this)">
+                📁 Semiconductors <span class="sector-count">(10)</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="sector-body">
+                <table>
+                    <thead><tr>
+                        <th>Ticker</th><th>Status</th><th>Stability</th>
+                        <th>Real R/R</th><th>Entry $</th><th>Stop Loss</th>
+                        <th>Target</th><th>Last Updated</th>
+                    </tr></thead>
+                    <tbody>
+            <tr>
+                <td><strong>TXN</strong></td>
+                <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+                <td class="num">94.0%</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>ADI</strong></td>
+                <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+                <td class="num">83.0%</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr>
+            <tr>
+                <td><strong>LRCX</strong></td>
+                <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+                <td class="num">81.9%</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>MRVL</strong></td>
+                <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+                <td class="num">80.0%</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>AMD</strong></td>
+                <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+                <td class="num">77.0%</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>MU</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>INTC</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr>
+            <tr>
+                <td><strong>AMAT</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr>
+            <tr>
+                <td><strong>QCOM</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>KLAC</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="sector-block">
+            <div class="sector-header" onclick="toggleSector(this)">
+                📁 Software / Cloud <span class="sector-count">(14)</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="sector-body">
+                <table>
+                    <thead><tr>
+                        <th>Ticker</th><th>Status</th><th>Stability</th>
+                        <th>Real R/R</th><th>Entry $</th><th>Stop Loss</th>
+                        <th>Target</th><th>Last Updated</th>
+                    </tr></thead>
+                    <tbody>
+            <tr>
+                <td><strong>DDOG</strong></td>
+                <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+                <td class="num">88.5%</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>ADBE</strong></td>
+                <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+                <td class="num">85.5%</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>CRWD</strong></td>
+                <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+                <td class="num">78.0%</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>PANW</strong></td>
+                <td><span class="badge badge-candidate">🔵 CANDIDATE</span></td>
+                <td class="num">66.4%</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>NET</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>CRM</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>NOW</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>WDAY</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>PLTR</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>FTNT</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:56</td>
+            </tr>
+            <tr>
+                <td><strong>TEAM</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>ZS</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>VEEV</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr>
+            <tr>
+                <td><strong>HUBS</strong></td>
+                <td><span class="badge badge-new">⚫ NEW</span></td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num freshness-stale">🔴 04-24 19:57</td>
+            </tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEWS -->
+    <div class="tab-panel" id="tab-news">
+        <div class="news-wrap">
+            <table>
+                <thead><tr>
+                    <th>Ticker</th><th>Source</th><th>Time</th><th>Headline</th>
+                </tr></thead>
+                <tbody>
+        <tr>
+            <td><strong>LMT</strong></td>
+            <td class="source">seekingalpha.com</td>
+            <td class="time">04-24 08:45</td>
+            <td class="headline"><a href="https://seekingalpha.com/article/4893674-lockheed-martin-q1-reality-check-and-the-road-to-2030" target="_blank">Lockheed Martin: Q1 Reality Check And The Road To 2030</a></td>
+        </tr>
+        <tr>
+            <td><strong>INTC</strong></td>
+            <td class="source">seekingalpha.com</td>
+            <td class="time">04-24 08:45</td>
+            <td class="headline"><a href="https://seekingalpha.com/article/4893914-intel-at-85-to-short-or-not-to-short-that-is-the-real-question" target="_blank">Intel At $85: To Short Or Not To Short, That Is The Real Question</a></td>
+        </tr>
+        <tr>
+            <td><strong>INTC</strong></td>
+            <td class="source">youtube.com</td>
+            <td class="time">04-24 08:30</td>
+            <td class="headline"><a href="https://www.youtube.com/watch?v=Jty9vIpY8Tg" target="_blank">INTC & TSM Rally Ahead of Friday's Session, Stay Cautious on Risks</a></td>
+        </tr>
+        <tr>
+            <td><strong>META</strong></td>
+            <td class="source">barrons.com</td>
+            <td class="time">04-24 08:28</td>
+            <td class="headline"><a href="https://www.barrons.com/articles/amazon-stock-price-meta-ai-chip-deal-78d1ba5b" target="_blank">Meta Strikes a Deal With Amazon for AI Chips. What It Means for the Stocks.</a></td>
+        </tr>
+        <tr>
+            <td><strong>MSFT</strong></td>
+            <td class="source">cnbc.com</td>
+            <td class="time">04-24 08:25</td>
+            <td class="headline"><a href="https://www.cnbc.com/2026/04/24/5-things-to-know-before-the-market-opens.html" target="_blank">Israel-Lebanon ceasefire, Microsoft's first-ever buyouts, Starbucks' loyalty program and more in Morning Squawk</a></td>
+        </tr>
+        <tr>
+            <td><strong>AVGO</strong></td>
+            <td class="source">benzinga.com</td>
+            <td class="time">04-24 08:23</td>
+            <td class="headline"><a href="https://www.benzinga.com/trading-ideas/technicals/26/04/52026556/broadcom-death-cross-just-died-after-a-45-stock-jump" target="_blank">Broadcom's Death Cross Just Died After A 45% Stock Jump</a></td>
+        </tr>
+        <tr>
+            <td><strong>UNH</strong></td>
+            <td class="source">wsj.com</td>
+            <td class="time">04-24 08:20</td>
+            <td class="headline"><a href="https://www.wsj.com/health/healthcare/u-s-health-insurers-step-up-prior-authorization-reforms-367ecd70" target="_blank">U.S. Health Insurers Step Up Prior Authorization Reforms</a></td>
+        </tr>
+        <tr>
+            <td><strong>ORCL</strong></td>
+            <td class="source">barrons.com</td>
+            <td class="time">04-24 08:20</td>
+            <td class="headline"><a href="https://www.barrons.com/articles/oracle-stock-buy-ai-microsoft-amazon-c70f00c5" target="_blank">Oracle Stock Gets a Fan. Why It Can Take on Microsoft and Amazon in the AI Cloud.</a></td>
+        </tr>
+        <tr>
+            <td><strong>AMD</strong></td>
+            <td class="source">barrons.com</td>
+            <td class="time">04-24 08:19</td>
+            <td class="headline"><a href="https://www.barrons.com/articles/amd-stock-price-upgrade-intel-earnings-fe6c748e" target="_blank">Advanced Micro Devices Stock Gets Upgraded to Buy. Why It's the Big Winner of Intel Earnings.</a></td>
+        </tr>
+        <tr>
+            <td><strong>RIVN</strong></td>
+            <td class="source">benzinga.com</td>
+            <td class="time">04-24 08:16</td>
+            <td class="headline"><a href="https://www.benzinga.com/trading-ideas/long-ideas/26/04/52026365/jim-cramer-has-a-clear-take-on-rivians-future-and-a-warning-about-an-ai-name" target="_blank">Jim Cramer Has A Clear Take On Rivian's Future — And A Warning About An AI Name</a></td>
+        </tr>
+        <tr>
+            <td><strong>LLY</strong></td>
+            <td class="source">reuters.com</td>
+            <td class="time">04-24 08:14</td>
+            <td class="headline"><a href="https://www.reuters.com/business/healthcare-pharmaceuticals/lillys-obesity-pill-hits-nearly-4000-prescriptions-second-week-after-launch-2026-04-24/" target="_blank">Lilly's obesity pill hits nearly 4000 prescriptions in second week after launch</a></td>
+        </tr>
+        <tr>
+            <td><strong>INTC</strong></td>
+            <td class="source">marketwatch.com</td>
+            <td class="time">04-24 08:10</td>
+            <td class="headline"><a href="https://www.marketwatch.com/story/intels-stock-extends-its-spectacular-run-and-could-see-its-best-daily-gain-on-record-6e6ef0de" target="_blank">Intel's stock extends its spectacular run — and could see its best daily gain on record</a></td>
+        </tr>
+        <tr>
+            <td><strong>AMZN</strong></td>
+            <td class="source">businesswire.com</td>
+            <td class="time">04-24 08:10</td>
+            <td class="headline"><a href="https://www.businesswire.com/news/home/20260424641117/en/Meta-Signs-Agreement-With-AWS-to-Power-Agentic-AI-on-AWS-Graviton-Chips/" target="_blank">Meta Signs Agreement With AWS to Power Agentic AI on AWS Graviton Chips</a></td>
+        </tr>
+        <tr>
+            <td><strong>RTX</strong></td>
+            <td class="source">247wallst.com</td>
+            <td class="time">04-24 08:05</td>
+            <td class="headline"><a href="https://247wallst.com/investing/2026/04/24/spacex-wont-pay-you-a-dime-5-space-economy-stocks-that-actually-pay-dividends/" target="_blank">SpaceX Won't Pay You a Dime: 5 Space Economy Stocks That Actually Pay Dividends</a></td>
+        </tr>
+        <tr>
+            <td><strong>VZ</strong></td>
+            <td class="source">benzinga.com</td>
+            <td class="time">04-24 08:02</td>
+            <td class="headline"><a href="https://www.benzinga.com/trading-ideas/dividends/26/04/52026042/how-to-earn-500-a-month-from-verizon-stock-ahead-of-q1-earnings" target="_blank">How To Earn $500 A Month From Verizon Stock Ahead Of Q1 Earnings</a></td>
+        </tr>
+        <tr>
+            <td><strong>META</strong></td>
+            <td class="source">reuters.com</td>
+            <td class="time">04-24 08:02</td>
+            <td class="headline"><a href="https://www.reuters.com/business/retail-consumer/meta-strikes-deal-with-amazons-cloud-unit-use-its-cpu-chips-2026-04-24/" target="_blank">Meta strikes deal with Amazon's cloud unit to use its CPU chips</a></td>
+        </tr>
+        <tr>
+            <td><strong>AAPL</strong></td>
+            <td class="source">youtube.com</td>
+            <td class="time">04-24 08:01</td>
+            <td class="headline"><a href="https://www.youtube.com/watch?v=ueLoTFcNY9g" target="_blank">5 Biggest Challenges for Apple's Next CEO, John Ternus | One More Thing</a></td>
+        </tr>
+        <tr>
+            <td><strong>META</strong></td>
+            <td class="source">cnbc.com</td>
+            <td class="time">04-24 08:00</td>
+            <td class="headline"><a href="https://www.cnbc.com/2026/04/24/meta-will-use-hundreds-of-thousands-of-aws-graviton-chips.html" target="_blank">Meta will adopt hundreds of thousands of AWS Graviton chips in latest AI infrastructure grab</a></td>
+        </tr>
+        <tr>
+            <td><strong>F</strong></td>
+            <td class="source">globenewswire.com</td>
+            <td class="time">04-24 08:00</td>
+            <td class="headline"><a href="https://www.globenewswire.com/news-release/2026/04/24/3280742/0/en/Media-Advisory-Ontario-Health-Coalition-Large-cross-province-protests-this-Saturday-Ford-gov-t-pushing-our-hospitals-into-deficit-cuts-while-paying-more-to-privatize-their-services.html" target="_blank">Media Advisory-Ontario Health Coalition/Large cross-province protests this Saturday: Ford gov't pushing our hospitals into deficit & cuts while paying more to privatize their services</a></td>
+        </tr>
+        <tr>
+            <td><strong>META</strong></td>
+            <td class="source">wsj.com</td>
+            <td class="time">04-24 08:00</td>
+            <td class="headline"><a href="https://www.wsj.com/cio-journal/meta-signs-multibillion-dollar-deal-with-amazon-to-use-its-cpu-chips-for-ai-45784c5e" target="_blank">Meta Signs Multibillion-Dollar Deal With Amazon to Use Its CPU Chips for AI</a></td>
+        </tr>
+        <tr>
+            <td><strong>META</strong></td>
+            <td class="source">techcrunch.com</td>
+            <td class="time">04-24 08:00</td>
+            <td class="headline"><a href="https://techcrunch.com/2026/04/24/in-another-wild-turn-for-ai-chips-meta-signs-deal-for-millions-of-amazon-ai-cpus/" target="_blank">In another wild turn for AI chips, Meta signs deal for millions of Amazon AI CPUs</a></td>
+        </tr>
+        <tr>
+            <td><strong>NVDA</strong></td>
+            <td class="source">prnewswire.com</td>
+            <td class="time">04-24 08:00</td>
+            <td class="headline"><a href="https://www.prnewswire.com/news-releases/nota-ai-wins-grand-prize-at-nvidia-nemotron-hackathon-proving-moe-quantization-prowess-with-synthetic-data-technology-302752573.html" target="_blank">Nota AI Wins Grand Prize at NVIDIA Nemotron Hackathon, Proving MoE Quantization Prowess with Synthetic Data Technology</a></td>
+        </tr>
+        <tr>
+            <td><strong>BKNG</strong></td>
+            <td class="source">globenewswire.com</td>
+            <td class="time">04-24 07:49</td>
+            <td class="headline"><a href="https://www.globenewswire.com/news-release/2026/04/24/3280723/0/en/Brits-Are-Packing-Their-Bags-for-a-Summer-of-Football-Abroad-According-to-KAYAK.html" target="_blank">Brits Are Packing Their Bags for a Summer of Football Abroad, According to KAYAK</a></td>
+        </tr>
+        <tr>
+            <td><strong>ORCL</strong></td>
+            <td class="source">benzinga.com</td>
+            <td class="time">04-24 07:48</td>
+            <td class="headline"><a href="https://www.benzinga.com/markets/tech/26/04/52025681/why-oracles-ai-spending-spree-has-wall-street-on-edge" target="_blank">Why Oracle's AI Spending Spree Has Wall Street On Edge</a></td>
+        </tr>
+        <tr>
+            <td><strong>NFLX</strong></td>
+            <td class="source">seekingalpha.com</td>
+            <td class="time">04-24 07:48</td>
+            <td class="headline"><a href="https://seekingalpha.com/article/4893889-netflix-reigns-supreme-with-unmatched-viewership-global-reach-and-robust-fundamentals" target="_blank">Netflix Reigns Supreme With Unmatched Viewership, Global Reach, And Robust Fundamentals</a></td>
+        </tr>
+        <tr>
+            <td><strong>AMD</strong></td>
+            <td class="source">marketbeat.com</td>
+            <td class="time">04-24 07:40</td>
+            <td class="headline"><a href="https://www.marketbeat.com/originals/amds-breakout-isnt-the-storythis-catalyst-is/" target="_blank">AMD's Breakout Isn't the Story—This Catalyst Is</a></td>
+        </tr>
+        <tr>
+            <td><strong>SPY</strong></td>
+            <td class="source">invezz.com</td>
+            <td class="time">04-24 07:38</td>
+            <td class="headline"><a href="https://invezz.com/news/2026/04/24/ftse-100-slips-as-iran-crisis-dampens-investor-confidence/" target="_blank">FTSE 100 slips as Iran crisis dampens investor confidence</a></td>
+        </tr>
+        <tr>
+            <td><strong>TSLA</strong></td>
+            <td class="source">barrons.com</td>
+            <td class="time">04-24 07:38</td>
+            <td class="headline"><a href="https://www.barrons.com/articles/tesla-stock-price-upgrade-ai-f25df7aa" target="_blank">Tesla Stock Rises After Upgrade But Heads for Weekly Loss. AI Is Key for a Rebound.</a></td>
+        </tr>
+        <tr>
+            <td><strong>INTC</strong></td>
+            <td class="source">247wallst.com</td>
+            <td class="time">04-24 07:37</td>
+            <td class="headline"><a href="https://247wallst.com/investing/2026/04/24/intels-ceo-just-admitted-elon-musk-will-teach-them-more-than-theyll-teach-him/" target="_blank">Intel's CEO Just Admitted Elon Musk Will Teach Them More Than They'll Teach Him</a></td>
+        </tr>
+        <tr>
+            <td><strong>SLB</strong></td>
+            <td class="source">wsj.com</td>
+            <td class="time">04-24 07:29</td>
+            <td class="headline"><a href="https://www.wsj.com/business/earnings/slb-profit-falls-as-iran-war-disrupts-operations-clouds-outlook-a460d695" target="_blank">SLB Profit Falls as Iran War Disrupts Operations, Clouds Outlook</a></td>
+        </tr>
+        <tr>
+            <td><strong>GOOGL</strong></td>
+            <td class="source">benzinga.com</td>
+            <td class="time">04-24 07:27</td>
+            <td class="headline"><a href="https://www.benzinga.com/analyst-stock-ratings/analyst-color/26/04/52025370/googles-enterprise-ai-push-gains-teeth-analysts-see-cloud-upside" target="_blank">Google's Enterprise AI Push Gains Teeth, Analysts See Cloud Upside</a></td>
+        </tr>
+        <tr>
+            <td><strong>SLB</strong></td>
+            <td class="source">barrons.com</td>
+            <td class="time">04-24 07:24</td>
+            <td class="headline"><a href="https://www.barrons.com/articles/slb-earnings-stock-price-f396cc69" target="_blank">SLB Stock Tumbles on Earnings as CEO Cites ‘Challenging Start to the Year'</a></td>
+        </tr>
+        <tr>
+            <td><strong>PLTR</strong></td>
+            <td class="source">reuters.com</td>
+            <td class="time">04-24 07:20</td>
+            <td class="headline"><a href="https://www.reuters.com/sustainability/society-equity/swiss-national-bank-defends-investment-approach-after-calls-ditch-palantir-stake-2026-04-24/" target="_blank">Swiss National Bank defends investment approach after calls to ditch Palantir stake</a></td>
+        </tr>
+        <tr>
+            <td><strong>TSLA</strong></td>
+            <td class="source">finbold.com</td>
+            <td class="time">04-24 07:17</td>
+            <td class="headline"><a href="https://finbold.com/teslas-california-market-share-soars-to-56-in-q1-2026/" target="_blank">Tesla's California market share soars to 56% in Q1 2026</a></td>
+        </tr>
+        <tr>
+            <td><strong>QQQ</strong></td>
+            <td class="source">fool.com</td>
+            <td class="time">04-24 07:15</td>
+            <td class="headline"><a href="https://www.fool.com/investing/2026/04/24/investors-will-soon-have-two-new-alternatives-to-i/" target="_blank">Investors Will Soon Have Two New Alternatives to Invesco QQQ</a></td>
+        </tr>
+        <tr>
+            <td><strong>TSLA</strong></td>
+            <td class="source">benzinga.com</td>
+            <td class="time">04-24 07:12</td>
+            <td class="headline"><a href="https://www.benzinga.com/analyst-stock-ratings/analyst-color/26/04/52025025/why-teslas-latest-earnings-dont-justify-its-massive-valuation" target="_blank">Why Tesla's Latest Earnings Don't Justify Its Massive Valuation</a></td>
+        </tr>
+        <tr>
+            <td><strong>INTC</strong></td>
+            <td class="source">invezz.com</td>
+            <td class="time">04-24 07:10</td>
+            <td class="headline"><a href="https://invezz.com/news/2026/04/24/intel-stock-skyrockets-28-so-why-are-analysts-still-saying-sell/" target="_blank">Intel stock skyrockets 28%, so why are analysts still saying sell?</a></td>
+        </tr>
+        <tr>
+            <td><strong>UNH</strong></td>
+            <td class="source">businesswire.com</td>
+            <td class="time">04-24 07:08</td>
+            <td class="headline"><a href="https://www.businesswire.com/news/home/20260423339948/en/UnitedHealthcare-Champions-Industry-Effort-to-Standardize-Prior-Authorization-Requirements/" target="_blank">UnitedHealthcare Champions Industry Effort to Standardize Prior Authorization Requirements</a></td>
+        </tr>
+        <tr>
+            <td><strong>TXN</strong></td>
+            <td class="source">marketbeat.com</td>
+            <td class="time">04-24 07:05</td>
+            <td class="headline"><a href="https://www.marketbeat.com/originals/texas-instruments-surges-18-as-data-center-demand-spikes-90/" target="_blank">Texas Instruments Surges 18% as Data Center Demand Spikes 90%</a></td>
+        </tr>
+        <tr>
+            <td><strong>SLB</strong></td>
+            <td class="source">reuters.com</td>
+            <td class="time">04-24 07:05</td>
+            <td class="headline"><a href="https://www.reuters.com/business/energy/oilfield-services-provider-slb-posts-lower-quarterly-profit-iran-war-hit-2026-04-24/" target="_blank">Oilfield services provider SLB posts lower quarterly profit on Iran war hit</a></td>
+        </tr>
+        <tr>
+            <td><strong>TXN</strong></td>
+            <td class="source">247wallst.com</td>
+            <td class="time">04-24 07:05</td>
+            <td class="headline"><a href="https://247wallst.com/investing/2026/04/24/think-its-too-late-to-buy-texas-instruments-heres-the-case-for-getting-in-now/" target="_blank">Think It's Too Late to Buy Texas Instruments? Here's the Case for Getting In Now</a></td>
+        </tr>
+        <tr>
+            <td><strong>AAPL</strong></td>
+            <td class="source">youtube.com</td>
+            <td class="time">04-24 07:01</td>
+            <td class="headline"><a href="https://www.youtube.com/watch?v=zcLr1oGNkp4" target="_blank">Megacap Earnings: Can Google, Amazon And Apple Prove AI Profitability? | IBD</a></td>
+        </tr>
+        <tr>
+            <td><strong>BMY</strong></td>
+            <td class="source">businesswire.com</td>
+            <td class="time">04-24 06:59</td>
+            <td class="headline"><a href="https://www.businesswire.com/news/home/20260423892519/en/Bristol-Myers-Squibb-and-Pfizer-to-Make-Eliquis%C2%AE-apixaban-Available-via-Mark-Cuban-Cost-Plus-Drug-Company/" target="_blank">Bristol Myers Squibb and Pfizer to Make Eliquis® (apixaban) Available via Mark Cuban Cost Plus Drug Company</a></td>
+        </tr>
+        <tr>
+            <td><strong>SMH</strong></td>
+            <td class="source">marketwatch.com</td>
+            <td class="time">04-24 06:53</td>
+            <td class="headline"><a href="https://www.marketwatch.com/story/theres-never-been-a-semiconductor-rally-like-this-one-and-thats-triggering-a-number-of-warnings-bf622cfa" target="_blank">There's never been a semiconductor rally like this one — and that's triggering a number of warnings</a></td>
+        </tr>
+        <tr>
+            <td><strong>TSM</strong></td>
+            <td class="source">barrons.com</td>
+            <td class="time">04-24 06:53</td>
+            <td class="headline"><a href="https://www.barrons.com/articles/tsmc-stock-price-taiwan-semi-adr-58a9ff51" target="_blank">TSMC Stock Surges to Record. Why It's Not Such Good News for American Investors.</a></td>
+        </tr>
+        <tr>
+            <td><strong>NOW</strong></td>
+            <td class="source">defenseworld.net</td>
+            <td class="time">04-24 06:52</td>
+            <td class="headline"><a href="https://www.defenseworld.net/2026/04/24/caprock-group-llc-purchases-20290-shares-of-servicenow-inc-now.html" target="_blank">Caprock Group LLC Purchases 20,290 Shares of ServiceNow, Inc. $NOW</a></td>
+        </tr>
+        <tr>
+            <td><strong>PLTR</strong></td>
+            <td class="source">seekingalpha.com</td>
+            <td class="time">04-24 06:51</td>
+            <td class="headline"><a href="https://seekingalpha.com/article/4893872-why-palantirs-story-just-entered-a-new-phase" target="_blank">Why Palantir's Story Just Entered A New Phase</a></td>
+        </tr>
+        <tr>
+            <td><strong>SLB</strong></td>
+            <td class="source">businesswire.com</td>
+            <td class="time">04-24 06:50</td>
+            <td class="headline"><a href="https://www.businesswire.com/news/home/20260422463846/en/SLB-Announces-First-Quarter-2026-Results/" target="_blank">SLB Announces First-Quarter 2026 Results</a></td>
+        </tr>
+        <tr>
+            <td><strong>AAPL</strong></td>
+            <td class="source">seekingalpha.com</td>
+            <td class="time">04-24 06:42</td>
+            <td class="headline"><a href="https://seekingalpha.com/article/4893868-the-new-void-within-apple" target="_blank">The New Void Within Apple</a></td>
+        </tr>
+        <tr>
+            <td><strong>TSLA</strong></td>
+            <td class="source">invezz.com</td>
+            <td class="time">04-24 06:40</td>
+            <td class="headline"><a href="https://invezz.com/news/2026/04/24/elon-musk-says-tesla-has-started-producing-cybecabs/" target="_blank">Elon Musk says Tesla has started producing cybecabs</a></td>
+        </tr></tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- FOOTER -->
+<footer>
+    SwingRadar DSS &nbsp;·&nbsp; V2.44 &nbsp;·&nbsp;
+    Built by <a href="https://www.nex41.io" target="_blank">Nex41</a>
+    &nbsp;·&nbsp;
+    <a href="https://www.nex41.io" target="_blank" style="color:var(--muted)">www.nex41.io</a>
+    &nbsp;·&nbsp; NYSE / NASDAQ &nbsp;·&nbsp; ISA Account (UK)
+    &nbsp;·&nbsp; Auto-refreshes every 15 minutes
+</footer>
+
+<script>
+    function showTab(name) {
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.getElementById('tab-' + name).classList.add('active');
+        event.target.classList.add('active');
+    }
+
+    function toggleSector(header) {
+        const body = header.nextElementSibling;
+        const icon = header.querySelector('.toggle-icon');
+        body.classList.toggle('collapsed');
+        icon.textContent = body.classList.contains('collapsed') ? '▶' : '▼';
+    }
+
+    // Auto-refresh countdown
+    let seconds = 900;
+    setInterval(() => {
+        seconds--;
+        if (seconds <= 0) location.reload();
+    }, 1000);
+</script>
+</body>
+</html>
